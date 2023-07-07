@@ -7,7 +7,7 @@ from siamfc import TrackerSiamFC
 
 
 if __name__ == '__main__':
-    root_dir = os.path.expanduser('~/data/GOT-10k')
+    root_dir = os.path.expanduser('~/2_dataset/GOT-10k-full_data')
     seqs = GOT10k(root_dir, subset='train', return_meta=True)
 
     tracker = TrackerSiamFC()
