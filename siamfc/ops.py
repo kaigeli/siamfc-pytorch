@@ -34,7 +34,7 @@ def show_image(img, boxes=None, box_fmt='ltwh', colors=None,
         img = cv2.cvtColor(img, cvt_code)
     
     # resize img if necessary
-    max_size = 960
+    max_size = 1920
     if max(img.shape[:2]) > max_size:
         scale = max_size / max(img.shape[:2])
         out_size = (
