@@ -232,7 +232,43 @@ class TrackerSiamFC(Tracker):
                 ops.show_image(img, boxes[f, :])
 
         return boxes, times
-    
+
+    def track_video(self, video_path, box, visualize=False):
+        cap = cv2.VideoCapture(video_path)
+        # 初始化帧计数器
+        frame_count = 0
+        # 获取视频的帧数
+        frame_num = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        boxes = np.zeros((frame_num, 4))
+        boxes[0] = box
+        times = np.zeros(frame_num)
+
+        # 循环读取视频帧
+        while cap.isOpened():
+            # 读取视频帧
+            ret, img = cap.read()
+
+            if not ret:
+                break
+            begin = time.time()
+            if frame_count == 0:
+                self.init(img, box)
+            else:
+                boxes[frame_count, :] = self.update(img)
+            times[frame_count] = time.time() - begin
+
+            if visualize:
+                ops.show_image(img, boxes[frame_count, :],cvt_code=None) 
+
+            # 递增帧计数器
+            frame_count += 1
+
+        # 释放视频捕获资源
+        cap.release()
+        # 打开视频文件
+
+        return boxes, times
+
     def train_step(self, batch, backward=True):
         # set network mode
         self.net.train(backward)
