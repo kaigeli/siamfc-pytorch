@@ -237,37 +237,66 @@ class TrackerSiamFC(Tracker):
         cap = cv2.VideoCapture(video_path)
         # 初始化帧计数器
         frame_count = 0
-        # 获取视频的帧数
+        # 获取视频的帧数, 宽高
         frame_num = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+        height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        # 初始化输出视频对象编码，与原视频一致，注：ffmpeg不支持h264，即：875967080,所以用MJPEG4替代
+        fourcc = int(cap.get(cv2.CAP_PROP_FOURCC))
+        if fourcc == 875967080:
+            fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+        # 可以查看fourcc格式
+        # print(chr(fourcc&0xFF) + chr((fourcc>>8)&0xFF) + chr((fourcc>>16)&0xFF) + chr((fourcc>>24)&0xFF))
+        fps = int(cap.get(cv2.CAP_PROP_FPS))
+        print(f'height, width:{(height, width)}')
         boxes = np.zeros((frame_num, 4))
         boxes[0] = box
-        times = np.zeros(frame_num)
+        read_times = np.zeros(frame_num)
+        track_times = np.zeros(frame_num)
+        show_times = np.zeros(frame_num)
+        out_dir = './out/'
+        os.makedirs(out_dir, exist_ok=True)
+        out_path = video_path.split('/')[-1].split('.')
+        out_path = out_dir+out_path[0]+'_box_'+str(box[0])+"_"+str(box[1])+"_"+str(box[2])+"_"+str(box[3])+"."+out_path[1]
+        print(out_path)
+        img_out = cv2.VideoWriter(out_path, fourcc, fps, (width, height))
 
         # 循环读取视频帧
         while cap.isOpened():
+            begin = time.time()
             # 读取视频帧
             ret, img = cap.read()
 
             if not ret:
                 break
-            begin = time.time()
+
+            read_times[frame_count] = time.time() - begin
+
             if frame_count == 0:
                 self.init(img, box)
             else:
                 boxes[frame_count, :] = self.update(img)
-            times[frame_count] = time.time() - begin
+
+            track_times[frame_count] = time.time() - read_times[frame_count] - begin
 
             if visualize:
-                ops.show_image(img, boxes[frame_count, :],cvt_code=None) 
+                image = ops.show_image(img, boxes[frame_count, :],cvt_code=None) 
+                img_out.write(image)
+            show_times[frame_count] = time.time() - track_times[frame_count] - read_times[frame_count] - begin
 
             # 递增帧计数器
             frame_count += 1
 
         # 释放视频捕获资源
         cap.release()
+        # 关闭输出视频对象
+        img_out.release()
         # 打开视频文件
+        print(f'average frame time: read:{read_times.sum()*1000/frame_count:.2f} ms, track:{track_times.sum()*1000/frame_count:.2f} ms, show:{show_times.sum()*1000/frame_count:.2f} ms')
+        #print(f'len: read_times:{len(read_times)}, track_time:{len(track_times)}, show_time:{len(show_times)}')
+        print(f'all time : {show_times.sum()+read_times.sum()+track_times.sum():.2f} s')
 
-        return boxes, times
+        return boxes
 
     def train_step(self, batch, backward=True):
         # set network mode
