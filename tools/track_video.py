@@ -1,12 +1,9 @@
 from __future__ import absolute_import
-
+from siamfc import TrackerSiamFC
 import argparse
 import os
 import glob
 import numpy as np
-
-from siamfc import TrackerSiamFC
-
 import cv2
 
 def parse_arguments():
@@ -63,6 +60,6 @@ if __name__ == '__main__':
     args = parse_arguments()
     video_path = os.path.expanduser(args.video_path)
     get_box(video_path)
-    
     tracker = TrackerSiamFC(net_path=args.model_path)
-    tracker.track_video(video_path, box_coordinates, visualize=True)
+    boxes = tracker.track_video(video_path, box_coordinates, visualize=True)
+    print(f'boxes:{boxes}')
