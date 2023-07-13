@@ -295,6 +295,16 @@ class TrackerSiamFC(Tracker):
         print(f'average frame time: read:{read_times.sum()*1000/frame_count:.2f} ms, track:{track_times.sum()*1000/frame_count:.2f} ms, show:{show_times.sum()*1000/frame_count:.2f} ms')
         #print(f'len: read_times:{len(read_times)}, track_time:{len(track_times)}, show_time:{len(show_times)}')
         print(f'all time : {show_times.sum()+read_times.sum()+track_times.sum():.2f} s')
+        # 打开文件以写入数据
+        box_path = out_path.replace("."+video_path.split('.')[-1],".txt")
+        print(f'boxes out path: {box_path}')
+        with open(box_path, "w") as file:
+        # 按行保存列表数据
+            for row in boxes:
+                # 将每一行转换为字符串形式，并以,分隔元素
+                row_str = ",".join(str(element) for element in row)
+                # 写入当前行数据并换行
+                file.write(row_str + "\n")
 
         return boxes
 
