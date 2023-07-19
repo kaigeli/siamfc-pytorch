@@ -20,7 +20,7 @@ from .heads import SiamFC
 from .losses import BalancedLoss
 from .datasets import Pair
 from .transforms import SiamFCTransforms
-
+from tqdm import tqdm
 
 __all__ = ['TrackerSiamFC']
 
@@ -362,16 +362,16 @@ class TrackerSiamFC(Tracker):
         
         # loop over epochs
         for epoch in range(self.cfg.epoch_num):
-            # update lr at each epoch
-            self.lr_scheduler.step(epoch=epoch)
-
+            pbar = tqdm(total=len(dataloader)) 
             # loop over dataloader
             for it, batch in enumerate(dataloader):
                 loss = self.train_step(batch, backward=True)
-                print('Epoch: {} [{}/{}] Loss: {:.5f}'.format(
+                pbar.update(1)
+                pbar.set_description('Epoch: {} [{}/{}] Loss: {:.5f}'.format(
                     epoch + 1, it + 1, len(dataloader), loss))
-                sys.stdout.flush()
-            
+            pbar.close()
+            # update lr at each epoch
+            self.lr_scheduler.step(epoch=epoch)
             # save checkpoint
             if not os.path.exists(save_dir):
                 os.makedirs(save_dir)

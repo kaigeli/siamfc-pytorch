@@ -46,7 +46,7 @@ Install Anaconda, then install dependencies:
 # install PyTorch >= 1.0
 conda install pytorch torchvision cudatoolkit=9.0 -c pytorch
 # intall OpenCV using menpo channel (otherwise the read data could be inaccurate)
-conda install -c menpo opencv
+conda install -c menpo opencv tqdm
 # install GOT-10k toolkit
 pip install got10k
 ```
