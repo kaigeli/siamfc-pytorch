@@ -21,6 +21,7 @@ from .losses import BalancedLoss
 from .datasets import Pair
 from .transforms import SiamFCTransforms
 from tqdm import tqdm
+import matplotlib.pyplot as plt
 
 __all__ = ['TrackerSiamFC']
 
@@ -121,36 +122,55 @@ class TrackerSiamFC(Tracker):
             box[3], box[2]], dtype=np.float32)
         self.center, self.target_sz = box[:2], box[2:]
 
-        # create hanning window
+        # create hanning window 272 = 16*17
         self.upscale_sz = self.cfg.response_up * self.cfg.response_sz
         self.hann_window = np.outer(
             np.hanning(self.upscale_sz),
             np.hanning(self.upscale_sz))
+        # self.hann_window.sum() = 18360.25
         self.hann_window /= self.hann_window.sum()
+        # 0~1/18360.25,中间大，四周小
 
         # search scale factors
+        # in paper scale_factors = 1.025{-2,-1,0,1,2},这里用的1.035
+        # np.linspace(-2,2,5) = array([-2., -1.,  0.,  1.,  2.])
+        # 1.035** np.linspace(-2,2,5) = array([0.9335107, 0.96618357, 1., 1.035, 1.071225])
         self.scale_factors = self.cfg.scale_step ** np.linspace(
             -(self.cfg.scale_num // 2),
             self.cfg.scale_num // 2, self.cfg.scale_num)
 
         # exemplar and search sizes
+        # self.target_sz = 21,20
+        # context = 0.5*41 = 20.5 (football 宽高大概为25，25)
+        # self.z_sz = np.sqrt(1680.75) = 40.997
+        # self.x_sz = 82.3167
+        # x_sz 一般为z_sz的两倍大小，因为256/128 = 2
+        # z_sz 和x_sz为crop的大小，即crop出来一个z_sz*z_sz的图片，再resize到exemplar_sz即127*127
+        # crop和resize方法可以优化
+        # np.prod是计算元素相乘
         context = self.cfg.context * np.sum(self.target_sz)
-        self.z_sz = np.sqrt(np.prod(self.target_sz + context))
+        self.z_sz = np.sqrt(np.prod(self.target_sz+context))
         self.x_sz = self.z_sz * \
             self.cfg.instance_sz / self.cfg.exemplar_sz
-        
+        print(f'context={context},z_sz = {self.z_sz}, z_xz = {self.x_sz}')
         # exemplar image
         self.avg_color = np.mean(img, axis=(0, 1))
+        # z_sz for crop, exemplar_sz 为输出大小，首帧为127
         z = ops.crop_and_resize(
             img, self.center, self.z_sz,
             out_size=self.cfg.exemplar_sz,
             border_value=self.avg_color)
-        
+
+        #print(f'z.shape = {z.shape}') out z.shape = (127, 127, 3)
         # exemplar features
+        # .permute(2, 0, 1)作用是将 (127, 127, 3)转为（3，127，127）
+        # .unsqueeze(0)作用是为Tensor增加一个维度
         z = torch.from_numpy(z).to(
             self.device).permute(2, 0, 1).unsqueeze(0).float()
+        # print(z.shape) #out torch.Size([1, 3, 127, 127])
         self.kernel = self.net.backbone(z)
-    
+        # print(self.kernel.shape)
+        # self.kernel.shape = torch.Size([1, 256, 6, 6])
     @torch.no_grad()
     def update(self, img):
         # set to evaluation mode
@@ -161,6 +181,7 @@ class TrackerSiamFC(Tracker):
             img, self.center, self.x_sz * f,
             out_size=self.cfg.instance_sz,
             border_value=self.avg_color) for f in self.scale_factors]
+
         x = np.stack(x, axis=0)
         x = torch.from_numpy(x).to(
             self.device).permute(0, 3, 1, 2).float()
@@ -175,12 +196,11 @@ class TrackerSiamFC(Tracker):
             u, (self.upscale_sz, self.upscale_sz),
             interpolation=cv2.INTER_CUBIC)
             for u in responses])
+
         responses[:self.cfg.scale_num // 2] *= self.cfg.scale_penalty
         responses[self.cfg.scale_num // 2 + 1:] *= self.cfg.scale_penalty
-
         # peak scale
         scale_id = np.argmax(np.amax(responses, axis=(1, 2)))
-
         # peak location
         response = responses[scale_id]
         response -= response.min()
@@ -248,7 +268,7 @@ class TrackerSiamFC(Tracker):
         # 可以查看fourcc格式
         # print(chr(fourcc&0xFF) + chr((fourcc>>8)&0xFF) + chr((fourcc>>16)&0xFF) + chr((fourcc>>24)&0xFF))
         fps = int(cap.get(cv2.CAP_PROP_FPS))
-        print(f'height, width:{(height, width)}')
+        # print(f'height, width:{(height, width)}')
         boxes = np.zeros((frame_num, 4))
         boxes[0] = box
         read_times = np.zeros(frame_num)

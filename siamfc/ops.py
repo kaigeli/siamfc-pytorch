@@ -88,31 +88,40 @@ def show_image(img, boxes=None, box_fmt='ltwh', colors=None,
 
     return img
 
-
 def crop_and_resize(img, center, size, out_size,
                     border_type=cv2.BORDER_CONSTANT,
                     border_value=(0, 0, 0),
                     interp=cv2.INTER_LINEAR):
     # convert box to corners (0-indexed)
-    size = round(size)
+    # round(size) 对size四舍五入取整，round(size, 2)保留两位小数
+    size = np.round(size)
+    # print(f'size = {size}')
+    # print(f'center = {center}')
     corners = np.concatenate((
         np.round(center - (size - 1) / 2),
         np.round(center - (size - 1) / 2) + size))
+    #  print(f'corners = {corners}')[816., 1729., 858., 1771.]
     corners = np.round(corners).astype(int)
-
+    # print(f'corners = {corners}') # [816, 1729, 858, 1771]
     # pad image if necessary
     pads = np.concatenate((
         -corners[:2], corners[2:] - img.shape[:2]))
+    # print(pads) #[-816, -1729, -222, -149]
     npad = max(0, int(pads.max()))
+    # print(f'img.shape = {img.shape}')
     if npad > 0:
         img = cv2.copyMakeBorder(
             img, npad, npad, npad, npad,
             border_type, value=border_value)
-
+        print(f'in img.shape = {img.shape}')
+    # print(f'out img.shape = {img.shape}')
     # crop image patch
     corners = (corners + npad).astype(int)
+    # print(f'corners = {corners}')
     patch = img[corners[0]:corners[2], corners[1]:corners[3]]
-
+    # print(f'patch.shape = {patch.shape}, out_size = {out_size}')
+    # cv2.imshow("Image with Trajectory", patch)
+    # cv2.waitKey(0)
     # resize to out_size
     patch = cv2.resize(patch, (out_size, out_size),
                        interpolation=interp)
