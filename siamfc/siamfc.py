@@ -395,11 +395,12 @@ class TrackerSiamFC(Tracker):
         for epoch in range(self.cfg.epoch_num):
             pbar = tqdm(total=len(dataloader)) 
             # loop over dataloader
+            losss = np.zeros(len(dataloader))
             for it, batch in enumerate(dataloader):
-                loss = self.train_step(batch, backward=True)
+                losss[it] = self.train_step(batch, backward=True)
                 pbar.update(1)
-                pbar.set_description('Epoch: {} [{}/{}] Loss: {:.5f}'.format(
-                    epoch + 1, it + 1, len(dataloader), loss))
+                pbar.set_description('Epoch: {} [{}/{}] Average Loss: {:.5f}'.format(
+                    epoch + 1, it + 1, len(dataloader), losss.sum()/(it+1)))
             pbar.close()
             # update lr at each epoch
             self.lr_scheduler.step(epoch=epoch)
