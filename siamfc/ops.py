@@ -88,6 +88,36 @@ def show_image(img, boxes=None, box_fmt='ltwh', colors=None,
 
     return img
 
+def resize_with_padding(image, target_size, padding_color=(0, 0, 0)):
+    original_height, original_width = image.shape[:2]
+    target_width, target_height = target_size
+
+    # 计算缩放比例
+    width_ratio = target_width / original_width
+    height_ratio = target_height / original_height
+
+    # 根据较小的比例进行缩放，保持原始宽高比
+    if width_ratio < height_ratio:
+        new_width = target_width
+        new_height = int(original_height * width_ratio)
+    else:
+        new_height = target_height
+        new_width = int(original_width * height_ratio)
+
+    # 使用cv2.resize()函数进行缩放
+    resized_image = cv2.resize(image, (new_width, new_height))
+
+    # 计算填充边缘的尺寸
+    top = (target_height - new_height) // 2
+    bottom = target_height - new_height - top
+    left = (target_width - new_width) // 2
+    right = target_width - new_width - left
+
+    # 使用cv2.copyMakeBorder()函数进行填充
+    padded_image = cv2.copyMakeBorder(resized_image, top, bottom, left, right, cv2.BORDER_CONSTANT, value=padding_color)
+
+    return padded_image
+
 def crop_and_resize(img, center, size, out_size,
                     border_type=cv2.BORDER_CONSTANT,
                     border_value=(0, 0, 0),
@@ -123,7 +153,11 @@ def crop_and_resize(img, center, size, out_size,
     # cv2.imshow("Image with Trajectory", patch)
     # cv2.waitKey(0)
     # resize to out_size
+    # 方案二：
     patch = cv2.resize(patch, (out_size, out_size),
                        interpolation=interp)
-
+    # 方案一：
+    # patch = resize_with_padding(patch, (out_size, out_size))
+    # cv2.imshow("Image with Trajectory", patch)
+    # cv2.waitKey(0)
     return patch
