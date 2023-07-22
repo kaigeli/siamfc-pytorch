@@ -160,6 +160,7 @@ class TrackerSiamFC(Tracker):
             img, self.center, self.z_sz,
             out_size=self.cfg.exemplar_sz,
             border_value=self.avg_color)
+        cv2.imwrite("./out/template.jpg", z)
 
         #print(f'z.shape = {z.shape}') out z.shape = (127, 127, 3)
         # exemplar features
@@ -172,7 +173,7 @@ class TrackerSiamFC(Tracker):
         # print(self.kernel.shape)
         # self.kernel.shape = torch.Size([1, 256, 6, 6])
     @torch.no_grad()
-    def update(self, img):
+    def update(self, img, frame_count):
         # set to evaluation mode
         self.net.eval()
 
@@ -182,13 +183,13 @@ class TrackerSiamFC(Tracker):
             out_size=self.cfg.instance_sz,
             border_value=self.avg_color) for f in self.scale_factors]
 
-        x = np.stack(x, axis=0)
-        x = torch.from_numpy(x).to(
+        x1 = np.stack(x, axis=0)
+        x1 = torch.from_numpy(x1).to(
             self.device).permute(0, 3, 1, 2).float()
         
         # responses
-        x = self.net.backbone(x)
-        responses = self.net.head(self.kernel, x)
+        x1 = self.net.backbone(x1)
+        responses = self.net.head(self.kernel, x1)
         responses = responses.squeeze(1).cpu().numpy()
 
         # upsample responses and penalize scale changes
@@ -201,8 +202,18 @@ class TrackerSiamFC(Tracker):
         responses[self.cfg.scale_num // 2 + 1:] *= self.cfg.scale_penalty
         # peak scale
         scale_id = np.argmax(np.amax(responses, axis=(1, 2)))
+        # print(f'scale_id = {scale_id}')
         # peak location
         response = responses[scale_id]
+        plt.imshow(response, cmap='hot') # 显示第一个通道的热度图
+        plt.axis('on') # 显示坐标轴
+        os.makedirs('out/hot_pic/', exist_ok=True)
+        plt.colorbar() # 添加颜色条
+        plt.clim(0, 6) # 设置值范围为0-1
+        plt.title('Heatmap')
+        plt.savefig(f'out/hot_pic/{frame_count:04d}.png')
+        plt.close()
+        cv2.imwrite(f'out/hot_pic/{frame_count:04d}.jpg',x[scale_id])
         response -= response.min()
         response /= response.sum() + 1e-16
         response = (1 - self.cfg.window_influence) * response + \
@@ -295,7 +306,7 @@ class TrackerSiamFC(Tracker):
             if frame_count == 0:
                 self.init(img, box)
             else:
-                boxes[frame_count, :] = self.update(img)
+                boxes[frame_count, :] = self.update(img, frame_count)
 
             track_times[frame_count] = time.time() - read_times[frame_count] - begin
 
