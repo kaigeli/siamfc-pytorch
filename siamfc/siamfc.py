@@ -149,7 +149,8 @@ class TrackerSiamFC(Tracker):
         # crop和resize方法可以优化
         # np.prod是计算元素相乘
         context = self.cfg.context * np.sum(self.target_sz)
-        self.z_sz = np.sqrt(np.prod(self.target_sz+context))
+        #self.z_sz = np.sqrt(np.prod(self.target_sz+context))
+        self.z_sz = self.target_sz
         self.x_sz = self.z_sz * \
             self.cfg.instance_sz / self.cfg.exemplar_sz
         print(f'context={context},z_sz = {self.z_sz}, z_xz = {self.x_sz}')

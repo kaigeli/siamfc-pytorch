@@ -45,6 +45,7 @@ class RandomStretch(object):
 class CenterCrop(object):
 
     def __init__(self, size):
+        #判断size为数字
         if isinstance(size, numbers.Number):
             self.size = (int(size), int(size))
         else:
@@ -124,9 +125,9 @@ class SiamFCTransforms(object):
             box[3], box[2]], dtype=np.float32)
         center, target_sz = box[:2], box[2:]
 
-        context = self.context * np.sum(target_sz)
-        size = np.sqrt(np.prod(target_sz + context))
-        size *= out_size / self.exemplar_sz
+        #context = self.context * np.sum(target_sz)
+        size = target_sz*2
+        #size *= out_size / self.exemplar_sz
 
         avg_color = np.mean(img, axis=(0, 1), dtype=float)
         interp = np.random.choice([
