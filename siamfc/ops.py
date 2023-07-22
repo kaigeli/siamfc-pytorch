@@ -143,7 +143,7 @@ def crop_and_resize(img, center, size, out_size,
         img = cv2.copyMakeBorder(
             img, npad, npad, npad, npad,
             border_type, value=border_value)
-        print(f'in img.shape = {img.shape}')
+    #    print(f'in img.shape = {img.shape}')
     # print(f'out img.shape = {img.shape}')
     # crop image patch
     corners = (corners + npad).astype(int)
