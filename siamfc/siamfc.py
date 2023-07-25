@@ -152,7 +152,7 @@ class TrackerSiamFC(Tracker):
         self.z_sz = np.sqrt(np.prod(self.target_sz+context))
         self.x_sz = self.z_sz * \
             self.cfg.instance_sz / self.cfg.exemplar_sz
-        print(f'context={context},z_sz = {self.z_sz}, z_xz = {self.x_sz}')
+        # print(f'context={context},z_sz = {self.z_sz}, z_xz = {self.x_sz}')
         # exemplar image
         self.avg_color = np.mean(img, axis=(0, 1))
         # z_sz for crop, exemplar_sz 为输出大小，首帧为127
@@ -274,11 +274,11 @@ class TrackerSiamFC(Tracker):
         read_times = np.zeros(frame_num)
         track_times = np.zeros(frame_num)
         show_times = np.zeros(frame_num)
-        out_dir = './out/'
-        os.makedirs(out_dir, exist_ok=True)
-        out_path = video_path.split('/')[-1].split('.')
-        out_path = out_dir+out_path[0]+'_box_'+str(box[0])+"_"+str(box[1])+"_"+str(box[2])+"_"+str(box[3])+"."+out_path[1]
-        print(out_path)
+        out_dir = './out/football/'
+        os.makedirs(out_dir+'img', exist_ok=True)
+        video_name = video_path.split('/')[-1].split('.')
+        out_path = out_dir+video_name[0]+'_box_'+str(box[0])+"_"+str(box[1])+"_"+str(box[2])+"_"+str(box[3])+"."+video_name[1]
+        print(f'out_path = {out_path} frame_num = {frame_num}')
         img_out = cv2.VideoWriter(out_path, fourcc, fps, (width, height))
 
         # 循环读取视频帧
@@ -289,7 +289,10 @@ class TrackerSiamFC(Tracker):
 
             if not ret:
                 break
-
+            # 生成文件名，并进行 4 位数字对齐格式化
+            filename = f"{frame_count+1:04d}.jpg"
+            img_out_path = os.path.join(out_dir, 'img', filename)
+            cv2.imwrite(img_out_path, img)
             read_times[frame_count] = time.time() - begin
 
             if frame_count == 0:
@@ -311,20 +314,22 @@ class TrackerSiamFC(Tracker):
         cap.release()
         # 关闭输出视频对象
         img_out.release()
-        # 打开视频文件
         print(f'average frame time: read:{read_times.sum()*1000/frame_count:.2f} ms, track:{track_times.sum()*1000/frame_count:.2f} ms, show:{show_times.sum()*1000/frame_count:.2f} ms')
         #print(f'len: read_times:{len(read_times)}, track_time:{len(track_times)}, show_time:{len(show_times)}')
         print(f'all time : {show_times.sum()+read_times.sum()+track_times.sum():.2f} s')
         # 打开文件以写入数据
-        box_path = out_path.replace("."+video_path.split('.')[-1],".txt")
+        box_path = out_dir+"groundtruth_rect.txt"
         print(f'boxes out path: {box_path}')
         with open(box_path, "w") as file:
-        # 按行保存列表数据
+            # 按行保存列表数据
             for row in boxes:
+                if row[0] == 0 and row[1] == 0 and row[2] == 0:
+                    continue
                 # 将每一行转换为字符串形式，并以,分隔元素
                 row_str = ",".join(str(element) for element in row)
                 # 写入当前行数据并换行
                 file.write(row_str + "\n")
+
 
         return boxes
 
